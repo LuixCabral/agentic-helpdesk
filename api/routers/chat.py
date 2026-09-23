@@ -1,16 +1,19 @@
 import json
+import os
 import uuid
 import logging
 
 from agno.run.agent import RunStartedEvent as AgentRunStartedEvent
 from agno.run.team import RunContentEvent as TeamRunContentEvent
 
+import psycopg
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from agno.team import Team
 
 from api.dependencies import get_agent
-from api.rate_limit import limiter, CHAT_RATE_LIMIT
+from api.rate_limit import limiter, CHAT_RATE_LIMIT, REDIS_URL
 from api.schemas.chat import ChatRequest
 
 logger = logging.getLogger(__name__)
@@ -70,12 +73,3 @@ async def chat(
             yield _sse(event="error", detail=str(exc))
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
-
-
-@router.get(
-    "/health",
-    summary="Healthcheck",
-    description="Retorna 200 OK quando a API e o agente estão prontos.",
-)
-async def health() -> dict:
-    return {"status": "ok"}

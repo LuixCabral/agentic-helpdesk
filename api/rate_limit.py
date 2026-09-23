@@ -1,17 +1,7 @@
-"""
-api/rate_limit.py
-─────────────────
-Módulo central de rate limiting usando slowapi + Redis.
-
-- `limiter`: instância compartilhada do Limiter (chave = IP do cliente).
-- `CHAT_RATE_LIMIT`: string de limite configurável via env (padrão: "10/minute").
-- `rate_limit_exceeded_handler`: handler de exceção que mantém o contrato
-  de streaming SSE em vez de retornar um HTTP 429 JSON padrão.
-"""
-
 import json
 import logging
-import os
+
+from api.config import get_settings
 
 from fastapi import Request
 from fastapi.responses import StreamingResponse
@@ -20,10 +10,11 @@ from slowapi.errors import RateLimitExceeded
 
 logger = logging.getLogger(__name__)
 
-# ─── Configuração via variáveis de ambiente ───────────────────────────────────
+# ─── Configuração via Settings centralizado ─────────────────────────────────
 
-REDIS_URL: str = os.getenv("REDIS_URL")
-CHAT_RATE_LIMIT: str = os.getenv("RATE_LIMIT_CHAT")
+_settings = get_settings()
+REDIS_URL: str = _settings.redis_url
+CHAT_RATE_LIMIT: str = _settings.rate_limit_chat
 
 # ─── Limiter ──────────────────────────────────────────────────────────────────
 
