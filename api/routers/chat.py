@@ -1,19 +1,16 @@
 import json
-import os
 import uuid
 import logging
 
 from agno.run.agent import RunStartedEvent as AgentRunStartedEvent
 from agno.run.team import RunContentEvent as TeamRunContentEvent
 
-import psycopg
-import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from agno.team import Team
 
-from api.dependencies import get_agent
-from api.rate_limit import limiter, CHAT_RATE_LIMIT, REDIS_URL
+from api.dependencies import get_agent, validate_api_key
+from api.rate_limit import limiter, CHAT_RATE_LIMIT
 from api.schemas.chat import ChatRequest
 
 logger = logging.getLogger(__name__)
@@ -40,6 +37,7 @@ async def chat(
     request: Request,
     body: ChatRequest,
     agent: Team = Depends(get_agent),
+    _: str = Depends(validate_api_key),
 ) -> StreamingResponse:
     session_id = body.session_id or str(uuid.uuid4())
 

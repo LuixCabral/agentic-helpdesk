@@ -23,6 +23,10 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
+    allowed_origins: list[str] = []
+
+    api_key:str
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

@@ -81,7 +81,7 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=get_settings().allowed_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 # ─── Routers ─────────────────────────────────────────────────────────────────
 app.include_router(chat.router, prefix="/api")
