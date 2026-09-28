@@ -18,8 +18,4 @@ build/
 *.swp
 *.swo
 
-# uv
-.uv/
-uv.lock
-
 

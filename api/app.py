@@ -17,7 +17,7 @@ from mcp import StdioServerParameters
 from Ai import build_team
 from api.config import get_settings
 from api.rate_limit import limiter, rate_limit_exceeded_handler
-from api.routers import chat, health
+from api.routers import chat_router, health_router, user_router
 
 load_dotenv()
 
@@ -84,5 +84,6 @@ app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(CORSMiddleware, allow_origins=get_settings().allowed_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 # ─── Routers ─────────────────────────────────────────────────────────────────
-app.include_router(chat.router, prefix="/api")
-app.include_router(health.router, prefix="/health")
+app.include_router(chat_router.router, prefix="/api")
+app.include_router(health_router.router, prefix="/health")
+app.include_router(user_router.router, prefix="/api")

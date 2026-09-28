@@ -25,7 +25,12 @@ class Settings(BaseSettings):
 
     allowed_origins: list[str] = []
 
-    api_key:str
+    api_key: str
+
+    # ── JWT ───────────────────────────────────────────────────────────────────
+    jwt_secret: str
+    jwt_expire_minutes: int = 15
+    jwt_refresh_token_expire_days: int = 7
 
 
 @lru_cache(maxsize=1)

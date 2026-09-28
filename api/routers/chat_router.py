@@ -11,7 +11,7 @@ from agno.team import Team
 
 from api.dependencies import get_agent, validate_api_key
 from api.rate_limit import limiter, CHAT_RATE_LIMIT
-from api.schemas.chat import ChatRequest
+from api.schemas.chat_schema import ChatRequest
 
 logger = logging.getLogger(__name__)
 
