@@ -1,3 +1,5 @@
+from api.dependencies import get_current_user
+from api.Models.user_model import User
 import json
 import uuid
 import logging
@@ -38,6 +40,7 @@ async def chat(
     body: ChatRequest,
     agent: Team = Depends(get_agent),
     _: str = Depends(validate_api_key),
+    user: User = Depends(get_current_user)
 ) -> StreamingResponse:
     session_id = body.session_id or str(uuid.uuid4())
 
@@ -50,8 +53,10 @@ async def chat(
             async for chunk in agent.arun(
                 body.message,
                 session_id=session_id,
+                user_id=str(user.id),
                 stream=True,
                 stream_events=True,
+                context={"user_name": user.name},
             ):
                 if isinstance(chunk, AgentRunStartedEvent):
                     # Registra qual agente membro foi acionado
