@@ -22,7 +22,7 @@ def create_user(
     return user
 
 
-@router.query("/login", response_model=TokenResponse, status_code=200)
+@router.post("/login", response_model=TokenResponse, status_code=200)
 def login(
     request: UserCreateRequest,
     db: Session = Depends(get_db),

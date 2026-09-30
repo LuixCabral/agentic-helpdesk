@@ -15,7 +15,7 @@ class ApiKeyService:
     def _generate_key(self) -> str:
         return f"ak_{secrets.token_urlsafe(32)}"
 
-    def create(self, user_id: int) -> ApiKey:
+    def create_api_key(self, user_id: int) -> ApiKey:
         user = self.db.query(User).filter(User.id == user_id, User.is_deleted == False).first()
         if not user:
             raise HTTPException(

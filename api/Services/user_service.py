@@ -1,4 +1,6 @@
 import bcrypt
+import jwt
+from jwt.exceptions import ExpiredSignatureError, PyJWTError
 
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
@@ -75,4 +77,38 @@ class UserService:
         user.soft_delete_user()
         self.db.commit()
         self.db.refresh(user)
+        return user
+
+    def get_authenticated_user(self, token: str, jwt_secret: str) -> User:
+        credentials_exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais inválidas ou token inválido.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+        try:
+            payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
+            token_type: str = payload.get("type")
+            user_id: str = payload.get("sub")
+
+            if token_type != "access" or not user_id:
+                raise credentials_exception
+
+        except ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expirado. Obtenha um novo token.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except PyJWTError:
+            raise credentials_exception
+
+        user = (
+            self.db.query(User)
+            .filter(User.id == int(user_id), User.is_deleted == False)
+            .first()
+        )
+        if not user:
+            raise credentials_exception
+
         return user
