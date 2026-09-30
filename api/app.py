@@ -16,6 +16,7 @@ from mcp import StdioServerParameters
 
 from Ai import build_team
 from api.config import get_settings
+from api.middleware.auth_middleware import AuthStateMiddleware
 from api.rate_limit import limiter, rate_limit_exceeded_handler
 from api.routers import chat_router, health_router, user_router
 
@@ -78,6 +79,9 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxies)
 # ─── Rate limiting ────────────────────────────────────────────────────────────
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+# AuthStateMiddleware deve vir ANTES do SlowAPIMiddleware para que
+# request.state.user esteja disponível quando o key_func for avaliado.
+app.add_middleware(AuthStateMiddleware)
 app.add_middleware(SlowAPIMiddleware)
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
