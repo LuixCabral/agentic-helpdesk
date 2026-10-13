@@ -87,6 +87,33 @@ uv run uvicorn api.app:app --reload --port 8000
 
 ---
 
+### HTTPS (nginx)
+
+O nginx escuta em `80` (só redireciona) e `443` (TLS). Ele espera os certificados em `nginx/certs/`:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `nginx/certs/fullchain.pem` | Certificado + cadeia intermediária |
+| `nginx/certs/privkey.pem` | Chave privada |
+
+O domínio é definido por `NGINX_SERVER_NAME` no `.env` (padrão: `localhost`). A pasta `nginx/certs/` está no `.gitignore` e no `.dockerignore`.
+
+**Teste local (certificado autoassinado):**
+
+```bash
+mkdir -p nginx/certs
+docker run --rm -v "$PWD/nginx/certs:/certs" alpine/openssl req -x509 -nodes \
+  -newkey rsa:2048 -days 365 -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost" \
+  -keyout /certs/privkey.pem -out /certs/fullchain.pem
+```
+
+**Produção:** copie para `nginx/certs/` o `fullchain.pem` e o `privkey.pem` emitidos para o seu domínio (ex.: Let's Encrypt em `/etc/letsencrypt/live/<dominio>/`) e rode `docker compose restart nginx`.
+
+> Se o TLS for terminado antes (Cloudflare, AWS ALB etc.), o nginx pode voltar a servir só HTTP.
+
+---
+
 ## Arquitetura
 
 ```

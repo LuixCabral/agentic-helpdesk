@@ -1,14 +1,25 @@
 import logging
 
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
 from api.config import get_settings
-from api.dependencies import _get_session_factory
+from api.dependencies import get_session_factory
+from api.Models.user_model import User
 from api.Services.user_service import UserService
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_user(token: str) -> User:
+    settings = get_settings()
+    db = get_session_factory()()
+    try:
+        return UserService(db).get_authenticated_user(token, settings.jwt_secret)
+    finally:
+        db.close()
 
 
 class AuthStateMiddleware(BaseHTTPMiddleware):
@@ -32,19 +43,9 @@ class AuthStateMiddleware(BaseHTTPMiddleware):
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header.removeprefix("Bearer ")
-            db = None
             try:
-                settings = get_settings()
-                db = _get_session_factory()()
-                service = UserService(db)
-                request.state.user = service.get_authenticated_user(
-                    token, settings.jwt_secret
-                )
+                request.state.user = await run_in_threadpool(_resolve_user, token)
             except Exception:
-                # Token inválido ou expirado: rate limit cai para X-Real-IP
                 pass
-            finally:
-                if db is not None:
-                    db.close()
 
         return await call_next(request)

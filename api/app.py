@@ -16,7 +16,9 @@ from mcp import StdioServerParameters
 
 from Ai import build_team
 from api.config import get_settings
+from api.dependencies import get_engine, to_sync_database_url
 from api.middleware.auth_middleware import AuthStateMiddleware
+from api.Models import Base
 from api.rate_limit import limiter, rate_limit_exceeded_handler
 from api.routers import chat_router, health_router, user_router
 
@@ -28,12 +30,14 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
-    database_url = settings.database_url
 
-    sync_url = database_url.replace("+psycopg_async", "+psycopg").replace(
-        "+asyncpg", "+psycopg"
-    )
-    db = PostgresDb(db_url=sync_url)
+    # Cria as tabelas da aplicação (users, api_keys) caso ainda não existam.
+    # create_all é idempotente: não altera tabelas já existentes.
+    engine = get_engine()
+    logger.info("Verificando/criando tabelas da aplicação...")
+    Base.metadata.create_all(engine)
+
+    db = PostgresDb(db_url=to_sync_database_url(settings.database_url))
 
     server_params = StdioServerParameters(
         command=sys.executable,
@@ -46,20 +50,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         env={**os.environ},
     )
 
-    logger.info("Iniciando MCPTools (jira_mcp.server)...")
-    async with MCPTools(
-        server_params=server_params,
-        exclude_tools=["get_project_info"],
-        timeout_seconds=30,
-    ) as jira_tools:
-        logger.info("Iniciando MCPTools (notion_mcp.server)...")
-        async with MCPTools(server_params=notion_params, timeout_seconds=60) as notion_tools:
-            logger.info("MCPTools inicializados. Construindo team...")
-            app.state.team = build_team(jira_tools, notion_tools, db=db)
-            logger.info("Team pronto. API disponível.")
-            yield
+    try:
+        logger.info("Iniciando MCPTools (jira_mcp.server)...")
+        async with MCPTools(
+            server_params=server_params,
+            exclude_tools=["get_project_info"],
+            timeout_seconds=30,
+        ) as jira_tools:
+            logger.info("Iniciando MCPTools (notion_mcp.server)...")
+            async with MCPTools(server_params=notion_params, timeout_seconds=60) as notion_tools:
+                logger.info("MCPTools inicializados. Construindo team...")
+                app.state.team = build_team(jira_tools, notion_tools, db=db)
+                logger.info("Team pronto. API disponível.")
+                yield
 
-    logger.info("MCPTools encerrados. Shutdown concluído.")
+        logger.info("MCPTools encerrados. Shutdown concluído.")
+    finally:
+        engine.dispose()
 
 
 app = FastAPI(

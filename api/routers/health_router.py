@@ -13,6 +13,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
 
 
+async def _skipped_check() -> bool:
+    """Placeholder para dependências opcionais não configuradas."""
+    return True
+
+
 # ── Liveness ──────────────────────────────────────────────────────────────────
 
 @router.get(
@@ -52,7 +57,7 @@ async def readiness(
         DatabaseService(pg_dsn).check_db_health(),
         CacheService(settings.redis_url).check_cache_health()
         if settings.redis_url
-        else asyncio.coroutine(lambda: True)(),
+        else _skipped_check(),
     )
 
     checks["postgres"] = "ok" if db_ok else "unreachable"

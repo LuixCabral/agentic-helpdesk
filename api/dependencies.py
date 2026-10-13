@@ -1,8 +1,9 @@
 from collections.abc import Generator
+from functools import lru_cache
 
 from fastapi import Depends, Request, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import create_engine
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from agno.team import Team
@@ -20,25 +21,32 @@ def get_settings_dep() -> Settings:
     return get_settings()
 
 
-def _get_session_factory() -> sessionmaker:
-    settings = get_settings()
-    sync_url = (
-        settings.database_url
+def to_sync_database_url(database_url: str) -> str:
+    """Converte a DATABASE_URL para o driver síncrono psycopg (v3)."""
+    return (
+        database_url
         .replace("+psycopg_async", "+psycopg")
         .replace("+asyncpg", "+psycopg")
     )
-    engine = create_engine(sync_url)
-    return sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
-_SessionFactory: sessionmaker | None = None
+@lru_cache(maxsize=1)
+def get_engine() -> Engine:
+    """Engine único por processo — compartilha o pool de conexões."""
+    settings = get_settings()
+    return create_engine(
+        to_sync_database_url(settings.database_url),
+        pool_pre_ping=True,
+    )
+
+
+@lru_cache(maxsize=1)
+def get_session_factory() -> sessionmaker:
+    return sessionmaker(bind=get_engine(), autocommit=False, autoflush=False)
 
 
 def get_db() -> Generator[Session, None, None]:
-    global _SessionFactory
-    if _SessionFactory is None:
-        _SessionFactory = _get_session_factory()
-    db = _SessionFactory()
+    db = get_session_factory()()
     try:
         yield db
     finally:

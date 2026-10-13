@@ -7,6 +7,11 @@ class UserCreateRequest(BaseModel):
     password: str = Field(..., min_length=8, description="Senha do usuário")
 
 
+class UserLoginRequest(BaseModel):
+    email: EmailStr = Field(..., description="E-mail do usuário")
+    password: str = Field(..., min_length=1, description="Senha do usuário")
+
+
 class UserUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=255)
     email: EmailStr | None = Field(default=None)

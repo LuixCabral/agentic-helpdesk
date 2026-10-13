@@ -1,5 +1,6 @@
 # Environment / secrets
 .env
+nginx/certs/
 
 # Python
 __pycache__/
