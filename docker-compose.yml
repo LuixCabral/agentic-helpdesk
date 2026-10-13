@@ -60,3 +60,9 @@ services:
 volumes:
   pg_data:
   redis_data:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
